@@ -1,68 +1,68 @@
-const express = require("express")
-const nodemailer = require("nodemailer")
-const cors = require("cors")
-require("dotenv").config()
+const express = require("express");
+const cors = require("cors");
+const { Resend } = require("resend");
+require("dotenv").config();
 
-const app = express()
+const app = express();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-app.use(cors())
-app.use(express.json())
+app.use(cors());
+app.use(express.json());
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-})
+app.get("/", (_req, res) => {
+  res.send("DS Afwerking API online");
+});
 
-app.post("/send-email", async (req, res) => {
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
 
-  const { name, email, subject, message } = req.body
-
+app.post("/api/contact", async (req, res) => {
   try {
+    const { name, email, subject, message } = req.body;
 
-    await transporter.sendMail({
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "Preencha nome, e-mail e mensagem."
+      });
+    }
 
-      from: `"Website DS Afwerking" <${process.env.SMTP_USER}>`,
-
-      to: process.env.MAIL_TO,
-
-      subject: `Nieuwe aanvraag: ${subject}`,
-
+    const { error } = await resend.emails.send({
+      from: "DS Afwerking <onboarding@resend.dev>",
+      to: [process.env.MAIL_TO],
+      replyTo: email,
+      subject: `Nieuwe aanvraag: ${subject || "Contactformulier"}`,
       html: `
         <h3>Nieuwe aanvraag via website</h3>
-
-        <p><b>Naam:</b> ${name}</p>
-
-        <p><b>Email:</b> ${email}</p>
-
-        <p><b>Onderwerp:</b> ${subject}</p>
-
-        <p><b>Bericht:</b></p>
-
-        <p>${message}</p>
+        <p><strong>Naam:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Onderwerp:</strong> ${subject || "-"}</p>
+        <p><strong>Bericht:</strong></p>
+        <p>${String(message).replace(/\n/g, "<br>")}</p>
       `
-    })
+    });
 
-    res.json({
+    if (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: "Fout bij verzenden."
+      });
+    }
+
+    return res.json({
       success: true,
-      message: "Email verzonden"
-    })
-
+      message: "Bericht succesvol verzonden."
+    });
   } catch (err) {
-
-    console.error(err)
-
-    res.status(500).json({
+    console.error(err);
+    return res.status(500).json({
       success: false,
-      message: "Email fout"
-    })
+      message: "Serverfout."
+    });
   }
-
-})
+});
 
 const PORT = process.env.PORT || 3000;
 
