@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-  res.send("DS Afwerking API online");
+  res.send("API de envio online");
 });
 
 app.get("/health", (_req, res) => {
@@ -29,7 +29,7 @@ app.post("/api/contact", async (req, res) => {
     }
 
     const { error } = await resend.emails.send({
-      from: "DS Afwerking <onboarding@resend.dev>",
+      from: "Forms WebSite <onboarding@resend.dev>",
       to: [process.env.MAIL_TO],
       replyTo: email,
       subject: `Nieuwe aanvraag: ${subject || "Contactformulier"}`,
